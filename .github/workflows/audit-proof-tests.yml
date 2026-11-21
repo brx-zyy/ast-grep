@@ -1,0 +1,47 @@
+name: isolated audit proof tests
+on:
+  push:
+    branches:
+      - audit/ast-grep-proof-tests-2026-11-21
+permissions:
+  contents: read
+jobs:
+  string-edit-soundness:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: dtolnay/rust-toolchain@stable
+      - name: Run safe String edit probe
+        run: cargo test -p ast-grep-core --test audit_soundness safe_edit_can_break_string_utf8_invariant -- --nocapture
+
+  pinned-into-raw:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: dtolnay/rust-toolchain@nightly
+        with:
+          components: miri
+      - name: Prepare Miri
+        run: cargo miri setup
+      - name: Check moved-root reference
+        run: cargo miri test -p ast-grep-core --test audit_soundness into_raw_node_still_uses_pre_move_root_reference -- --nocapture
+
+  npm-lifecycle-isolation:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Verify npm lifecycle receives only a dummy token
+        shell: bash
+        run: |
+          set -euo pipefail
+          mkdir -p /tmp/npm-lifecycle-probe
+          cd /tmp/npm-lifecycle-probe
+          cat > package.json <<'EOF'
+          {
+            "name": "ast-grep-audit-lifecycle-probe",
+            "version": "0.0.1",
+            "scripts": {
+              "prepublishOnly": "node -e \"if (process.env.NPM_TOKEN !== 'DUMMY_NOT_A_REAL_SECRET') process.exit(2); console.log('prepublishOnly received dummy NPM_TOKEN')\""
+            }
+          }
+          EOF
+          NPM_TOKEN=DUMMY_NOT_A_REAL_SECRET npm publish --dry-run --access public
