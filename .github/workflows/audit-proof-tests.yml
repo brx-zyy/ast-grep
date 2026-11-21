@@ -22,9 +22,9 @@ jobs:
         with:
           components: miri
       - name: Prepare Miri
-        run: cargo miri setup
+        run: cargo +nightly miri setup
       - name: Check moved-root reference
-        run: cargo miri test -p ast-grep-core --test audit_soundness into_raw_node_still_uses_pre_move_root_reference -- --nocapture
+        run: cargo +nightly miri test -p ast-grep-core --test audit_soundness into_raw_node_still_uses_pre_move_root_reference -- --nocapture
 
   npm-lifecycle-isolation:
     runs-on: ubuntu-latest
